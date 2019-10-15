@@ -8,6 +8,7 @@
 *.map
 *.sym
 *.eep
+*.pyc
 LUFA/
 .idea/misc.xml
 .idea/modules.xml

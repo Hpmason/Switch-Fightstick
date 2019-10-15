@@ -1,104 +1,55 @@
-import sys
+
 import time
 
-import pygame
 from serial.tools import list_ports
 
-from switchlib import InputManager
-from seriallib import SerialManager, Payload
+import seriallib
+from JoystickEnums import Button, HAT
 
-BAUD = 38400
 
-UPDATES_PER_SECOND = 60
 
-payload = Payload()
-
-def getPortFromUser():
-	portList = list(list_ports.grep(""))
-	if len(portList) == 0:
+def get_port_from_user():
+	port_list = list(list_ports.grep(""))
+	if len(port_list) == 0:
 		raise LookupError("Unable to detect Serial Device.")
-	indexPortListString = [f"Index: {index}, Port: {port.device}, Description: {port.description}"
-						   for index, port in enumerate(portList)]
-	print(indexPortListString)
+	index_port_list_str = [f"Index: {index}, Port: {port.device}, Description: {port.description}"
+						   for index, port in enumerate(port_list)]
+	print(index_port_list_str)
 	while True:
 		ind = input("What port index should be used? ")
 		if not str.isdigit(ind):
 			print(f"Value given is not a digit")
-		elif not (0 <= int(ind) < len(portList)):
+		elif not (0 <= int(ind) < len(port_list)):
 			print("Value given is not an index in the list")
 		else:
-			return portList[int(ind)].device
+			return port_list[int(ind)].device
 
+def packet_cycle(ser_man, payload):
+	ser_man.write(payload.as_byte_arr())
+	while ser_man.in_waiting < 1:
+		time.sleep(1/1000)
+	ser_man.read()
 
+if __name__ == "__main__":
+	BAUD = 38400
+	UPDATES_PER_SECOND = 60
 
-
-winDim = (640, 480)
-lockMouse = False
-mouseSens = (2, 2)
-mouseDelta = (0, 0)
-
-inMan = InputManager("controllerMapping.csv")
-
-pygame.init()
-
-screen = pygame.display.set_mode(winDim)
-
-myFont = pygame.font.SysFont("Arial", 16, bold=True)
-
-textColor = pygame.Color(255, 255, 255)
-screenFillColor = pygame.Color(0, 0, 0)
-
-keysDown = []
-
-with SerialManager(getPortFromUser(), BAUD) as serialMan:
-	while True:
-		payload.resetAllInputs()
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				serialMan.flush()
-				sys.exit()
-
-			elif event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					pygame.quit()
-					serialMan.flush()
-					sys.exit()
-				elif event.key == pygame.K_TAB:
-					lockMouse = not lockMouse
-				elif not event.key in keysDown:
-					keysDown.append(event.key)
-
-			elif event.type == pygame.KEYUP:
-				if event.key in keysDown:
-					keysDown.remove(event.key)
+	pack = seriallib.Payload()
+	with seriallib.SerialManager(get_port_from_user(), BAUD) as ser:
+		print("Flushing Serial Port")
+		ser.flush()
+		print("Starting Main Loop")
+		pack.apply_buttons(Button.A)
+		packet_cycle(ser, pack)
+		while True:
+			time.sleep(1)
+			pack.set_left_stick(128, 255)
+			packet_cycle(ser, pack)
+			pack.reset_inputs()
+			time.sleep(1)
+			pack.set_hat(0,-1)
+			packet_cycle(ser, pack)
 			
-			elif event.type == pygame.MOUSEMOTION:
-				mouseDelta = event.rel
 
-			elif event.type == pygame.MOUSEBUTTONDOWN:
-				keyStr = f"m{event.button}"
-				if not keyStr in keysDown:
-					keysDown.append(keyStr)
 
-			elif event.type == pygame.MOUSEBUTTONUP:
-				keyStr = f"m{event.button}"
-				if keyStr in keysDown:
-					keysDown.remove(keyStr)
-
-		inMan.processInputs(payload, keysDown,
-				(mouseDelta[0] * mouseSens[0], -mouseDelta[1] * mouseSens[1]))
-
-		if lockMouse and pygame.mouse.get_focused():
-				pygame.mouse.set_pos(winDim[0] / 2, winDim[1] / 2)
-				pygame.event.get(pygame.MOUSEMOTION)
-		mouseDelta = (0, 0)
-
-		screen.fill(screenFillColor)
-
-		screen.blit(myFont.render(f"Sending:{str(payload)}", True, textColor), (0,0))
-		screen.blit(myFont.render(f"Receiving:{serialMan.readPortAsIntArr()}", True, textColor), (0,20))
-
-		pygame.display.flip()
-		serialMan.write(payload.asByteArray())
-		time.sleep(1/UPDATES_PER_SECOND)
+				

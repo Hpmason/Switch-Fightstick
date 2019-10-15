@@ -4,7 +4,7 @@ validButtonValues = ["-LX", "+LX", "-LY", "+LY",
 						"DUP", "DDOWN", "DLEFT", "DRIGHT",
 						"Y", "B", "A", "X", 
 						"L", "R", "ZL", "ZR",
-						"MINUS", "PLUS"
+						"MINUS", "PLUS",
 						"L_CLICK", "R_CLICK",
 						"HOME", "CAPTURE", ]
 
