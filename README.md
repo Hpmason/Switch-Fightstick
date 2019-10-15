@@ -1,3 +1,6 @@
+# NOTE: Currently doesn't work on switch, will be updating soon
+I've been having some issues sending data to the microcontroller while connected to the switch. It works fine while connected to PC/Mac. Will be looking into this and fixing it as soon as I can.
+
 ## Switch UART Controller Tools
 UART Reference/Library for Switch-FightStick Controller
 
